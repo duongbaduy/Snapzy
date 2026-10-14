@@ -3784,7 +3784,7 @@ final class AnnotateState: ObservableObject {
       annotations[index].properties.opacity = AnnotationProperties.clampedOpacity(opacity)
     }
     if let rotationDegrees = rotationDegrees {
-      annotations[index].properties.rotationDegrees = AnnotationProperties.clampedRotationDegrees(rotationDegrees)
+      annotations[index].properties.rotationDegrees = annotations[index].type.clampedRotationDegrees(rotationDegrees)
     }
     if let watermarkStyle = watermarkStyle {
       annotations[index].properties.watermarkStyle = watermarkStyle
@@ -3885,7 +3885,7 @@ final class AnnotateState: ObservableObject {
       return true
     }
     if let rotationDegrees,
-       properties.rotationDegrees != AnnotationProperties.clampedRotationDegrees(rotationDegrees) {
+       properties.rotationDegrees != annotation.type.clampedRotationDegrees(rotationDegrees) {
       return true
     }
     if let watermarkStyle,
