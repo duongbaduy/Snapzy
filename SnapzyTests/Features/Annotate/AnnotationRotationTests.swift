@@ -201,4 +201,71 @@ final class AnnotationRotationTests: XCTestCase {
     XCTAssertEqual(anchorAfter.y, anchorBefore.y, accuracy: 0.001)
     XCTAssertEqual(stored.size, localResize.size)
   }
+
+  // MARK: - Quick bar angle field
+
+  @MainActor
+  private func makeState(with annotations: [AnnotationItem]) -> AnnotateState {
+    let state = AnnotateState(defaults: UserDefaultsFactory.make())
+    Self.retainedStates.append(state)
+    state.annotations = annotations
+    state.setSelectedAnnotationIds(Set(annotations.map(\.id)))
+    return state
+  }
+
+  // AnnotateState teardown is not test-safe; keep instances alive like the other suites.
+  @MainActor private static var retainedStates: [AnnotateState] = []
+
+  @MainActor
+  func testQuickRotation_insertedImageGetsAngleField() {
+    let image = item(.embeddedImage(UUID()), rotation: 30)
+    let state = makeState(with: [image])
+
+    XCTAssertTrue(state.quickPropertiesSupportsAnnotationRotation)
+    XCTAssertEqual(state.quickAnnotationRotationDegrees, 30)
+  }
+
+  @MainActor
+  func testQuickRotation_hiddenForNonRotatableSelection() {
+    let arrow = AnnotationItem(
+      type: .arrow(ArrowGeometry(start: .zero, end: CGPoint(x: 50, y: 0), style: .straight)),
+      bounds: CGRect(x: 0, y: 0, width: 50, height: 1),
+      properties: AnnotationProperties()
+    )
+    let state = makeState(with: [arrow])
+
+    XCTAssertFalse(state.quickPropertiesSupportsAnnotationRotation)
+  }
+
+  @MainActor
+  func testQuickRotation_mixedAnglesShowNoValueAndCommitAppliesToRotatableOnly() throws {
+    let rectangle = item(.rectangle, rotation: 10)
+    let text = item(.text("a"), rotation: -20)
+    let arrow = AnnotationItem(
+      type: .arrow(ArrowGeometry(start: .zero, end: CGPoint(x: 50, y: 0), style: .straight)),
+      bounds: CGRect(x: 0, y: 0, width: 50, height: 1),
+      properties: AnnotationProperties(rotationDegrees: 5)
+    )
+    let state = makeState(with: [rectangle, text, arrow])
+
+    XCTAssertNil(state.quickAnnotationRotationDegrees)
+
+    state.setQuickAnnotationRotation(200)
+
+    let angles = state.annotations.map(\.properties.rotationDegrees)
+    XCTAssertEqual(angles, [-160, -160, 5])
+    XCTAssertEqual(state.quickAnnotationRotationDegrees, -160)
+  }
+
+  @MainActor
+  func testQuickRotation_commitIsOneUndoStep() {
+    let rectangle = item(.rectangle, rotation: 10)
+    let oval = item(.oval, rotation: 40)
+    let state = makeState(with: [rectangle, oval])
+
+    state.setQuickAnnotationRotation(90)
+    state.undo()
+
+    XCTAssertEqual(state.annotations.map(\.properties.rotationDegrees), [10, 40])
+  }
 }

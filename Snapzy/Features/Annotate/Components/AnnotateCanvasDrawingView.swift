@@ -1233,13 +1233,9 @@ final class DrawingCanvasNSView: NSView {
     return true
   }
 
-  /// Only a single selected box item rotates. Images placed by Combine are the
-  /// canvas layout itself, so they never rotate.
+  /// The rotation handle appears for a single selected item only.
   private func canRotateAnnotation(_ annotation: AnnotationItem) -> Bool {
-    guard annotation.type.supportsRotation,
-          state.selectedAnnotationIds.count == 1 else { return false }
-    if state.isCombineMode, case .embeddedImage = annotation.type { return false }
-    return true
+    state.selectedAnnotationIds.count == 1 && state.canUserRotate(annotation)
   }
 
   private func beginAreaSelection(at imagePoint: CGPoint) {
